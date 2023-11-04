@@ -104,41 +104,40 @@ function generation ({ version = '1.8', seed = undefined, worldHeight = 80, wate
         const bedrockheight = 1 + seedRand(4)
         for (let y = 0; y < 256; y++) {
           let block
-          let data
-          const surfaceblock = level < waterline ? mcData.blocksByName.sand.id : (isFlatteningVersion() ? mcData.blocksByName.grass_block.id : mcData.blocksByName.grass.id) // Sand below water, grass
-          const belowblock = level < waterline ? mcData.blocksByName.sand.id : mcData.blocksByName.dirt.id // 3-5 blocks below surface
-          if (y < bedrockheight) block = mcData.blocksByName.bedrock.id // Solid bedrock at bottom
+          let data = 0
+          const surfaceblock = level < waterline ? mcData.blocksByName.sand : (isFlatteningVersion() ? mcData.blocksByName.grass_block : mcData.blocksByName.grass) // Sand below water, grass
+          const belowblock = level < waterline ? mcData.blocksByName.sand : mcData.blocksByName.dirt // 3-5 blocks below surface
+          if (y < bedrockheight) block = mcData.blocksByName.bedrock // Solid bedrock at bottom
           else if (y < level && y >= dirtheight) {
             block = belowblock // Dirt/sand below surface
-            if (isFlatteningVersion()) {
-              if (level < waterline) data = 0 // Default sand data is 0
-              else data = 1 // Default dirt data is 1, 0 is snowy
-            }
-          } else if (y < level) block = mcData.blocksByName.stone.id // Set stone inbetween
+          } else if (y < level) {
+            block = mcData.blocksByName.stone // Set stone inbetween
+            if (y > 20 && seedRand(40) === 0) block = mcData.blocksByName.coal_ore
+            else if (y > 20 && seedRand(50) === 0) block = mcData.blocksByName.iron_ore
+            else if (y < 20 && seedRand(100) === 0) block = mcData.blocksByName.redstone_ore
+            else if (y < 20 && seedRand(150) === 0) block = mcData.blocksByName.diamond_ore
+          }
           else if (y === level) {
             block = surfaceblock // Set surface sand/grass
-            if (isFlatteningVersion()) {
-              if (level < waterline) data = 0 // Default sand data is 0
-              else data = 1 // Default dirt data is 1, 0 is snowy
-            }
-          } else if (y <= waterline) block = mcData.blocksByName.water.id // Set the water
+          } else if (y <= waterline) block = mcData.blocksByName.water // Set the water
           else if (y === level + 1 && level >= waterline && seedRand(10) === 0) { // 1/10 chance of grass
             if (isFlatteningVersion()) {
-              block = mcData.blocksByName.grass.id
-              data = 0
+              block = mcData.blocksByName.grass
             } else {
-              block = mcData.blocksByName.tallgrass.id
+              block = mcData.blocksByName.tallgrass
               data = 1
             }
           }
           const pos = new Vec3(x, y, z)
-          if (block) chunk.setBlockType(pos, block)
-          if (data) {
-            if (isFlatteningVersion()) chunk.setBlockStateId(pos, block+data)
-            else chunk.setBlockData(pos, data)
+          if (block) {
+            if (isFlatteningVersion()) chunk.setBlockStateId(pos, block?.defaultState)
+            else {
+              chunk.setBlockType(pos, block.id)
+              if (data) chunk.setBlockData(pos, data)
+            }
           }
           chunk.setSkyLight(pos, 15)
-        }
+          }
       }
     }
     return chunk
