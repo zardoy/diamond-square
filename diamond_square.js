@@ -2,6 +2,7 @@
 
 const { Vec3 } = require('vec3')
 const rand = require('random-seed')
+const { getRenamedData } = require('flying-squid/dist/blockRenames')
 
 class Perlin {
   constructor (seed, numOctaves = 4) {
@@ -143,7 +144,19 @@ function duplicateArr (arr, times) {
 
 function generation ({ version = '1.8', seed, worldHeight = 80, waterline = 32, size = 10000000, roughness = null } = {}) {
   const Chunk = require('prismarine-chunk')(version)
-  const registry = require('prismarine-registry')(version)
+  // const registry = require('prismarine-registry')(version)
+  const blocksCache = {}
+  const originalRegistry = require('prismarine-registry')(version)
+  const registry = {
+    blocksByName: new Proxy({}, {
+      get(target, name) {
+        if (name in blocksCache) return blocksCache[name]
+        const block = getRenamedData('blocks', name, '1.18.2', version)
+        blocksCache[name] = originalRegistry.blocksByName[block]
+        return blocksCache[name]
+      }
+    })
+  }
 
   // Selected empirically
   if (roughness === null) roughness = size / 500
@@ -167,7 +180,7 @@ function generation ({ version = '1.8', seed, worldHeight = 80, waterline = 32, 
     const worldX = chunkX * 16 + size / 2
     const worldZ = chunkZ * 16 + size / 2
 
-    const theFlattening = registry.supportFeature('theFlattening')
+    const theFlattening = originalRegistry.supportFeature('theFlattening')
     const levels = []
 
     for (let x = 0; x < 16; x++) {
