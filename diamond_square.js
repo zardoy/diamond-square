@@ -2,7 +2,6 @@
 
 const { Vec3 } = require('vec3')
 const rand = require('random-seed')
-const { getRenamedData } = require('flying-squid/dist/blockRenames')
 
 class Perlin {
   constructor (seed, numOctaves = 4) {
@@ -142,7 +141,7 @@ function duplicateArr (arr, times) {
   return Array(times).fill([...arr]).reduce((a, b) => a.concat(b))
 }
 
-function generation ({ version = '1.8', seed, worldHeight = 80, waterline = 32, size = 10000000, roughness = null } = {}) {
+function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, size = 10000000, roughness = null, getRenamedData } = {}) {
   const Chunk = require('prismarine-chunk')(version)
   // const registry = require('prismarine-registry')(version)
   const blocksCache = {}
@@ -175,7 +174,10 @@ function generation ({ version = '1.8', seed, worldHeight = 80, waterline = 32, 
   ]
 
   function generateSimpleChunk (chunkX, chunkZ) {
-    const chunk = new Chunk()
+    const chunk = new Chunk({
+      minY,
+      worldHeight
+    })
     const placements = rand.create(seed + ':' + chunkX + ':' + chunkZ)
     const worldX = chunkX * 16 + size / 2
     const worldZ = chunkZ * 16 + size / 2
