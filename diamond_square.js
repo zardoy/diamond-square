@@ -391,18 +391,12 @@ function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, si
           ]
           for (const [offsetX, offsetY, offsetZ] of offsets) {
             setBlock(topOfTree.offset(offsetX, offsetY, offsetZ), blocksByName.oak_leaves)
-            if (theFlattening) {
-              chunk.setBlockData(topOfTree.offset(offsetX, offsetY, offsetZ), 0)
-            }
           }
           for (let i = height - 3; i < height - 1; i++) {
             for (let dx = -2; dx <= 2; dx++) {
               for (let dz = -2; dz <= 2; dz++) {
                 if (dx === 0 && dz === 0) continue
                 setBlock(decorationVec.offset(dx, i, dz), blocksByName.oak_leaves)
-                if (theFlattening) {
-                  chunk.setBlockData(decorationVec.offset(dx, i, dz), 0)
-                }
               }
             }
           }
