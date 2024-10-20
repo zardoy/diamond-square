@@ -2,6 +2,7 @@
 
 const { Vec3 } = require('vec3')
 const rand = require('random-seed')
+const MinecraftData = require('minecraft-data')
 
 class Perlin {
   constructor (seed, numOctaves = 4) {
@@ -145,6 +146,7 @@ function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, si
   const Chunk = require('prismarine-chunk')(version)
   const blocksCache = {}
   const originalRegistry = require('prismarine-registry')(version)
+  const data = MinecraftData(version)
   const registry = {
     blocksByName: new Proxy({}, {
       get(target, name) {
@@ -153,7 +155,8 @@ function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, si
         blocksCache[name] = originalRegistry.blocksByName[block]
         return blocksCache[name]
       }
-    })
+    }),
+    biomesByName: data.biomesByName
   }
   const blocksByName = registry.blocksByName
 
@@ -217,9 +220,11 @@ function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, si
           currentWaterline
         })
 
-        // Set sky light
+        // Set sky light and biome
         for (let y = 0; y < 256; y++) {
           chunk.setSkyLight(new Vec3(x, y, z), 15)
+          const biomeId = biome === 'ocean' ? registry.biomesByName.ocean?.id : registry.biomesByName.plains?.id;
+          chunk.setBiome(new Vec3(x, y, z), biomeId ?? 0)
         }
       }
     }
