@@ -143,7 +143,6 @@ function duplicateArr (arr, times) {
 
 function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, size = 10000000, roughness = null, getRenamedData } = {}) {
   const Chunk = require('prismarine-chunk')(version)
-  // const registry = require('prismarine-registry')(version)
   const blocksCache = {}
   const originalRegistry = require('prismarine-registry')(version)
   const registry = {
@@ -156,8 +155,8 @@ function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, si
       }
     })
   }
+  const blocksByName = registry.blocksByName
 
-  // Selected empirically
   if (roughness === null) roughness = size / 500
   const seedRand = rand.create(seed)
   const maxInt = 2 ^ 53 - 1
@@ -178,6 +177,9 @@ function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, si
       minY,
       worldHeight
     })
+    const setBlock = (pos, block) => {
+      chunk.setBlockStateId(pos, block.defaultState ?? 0)
+    }
     const placements = rand.create(seed + ':' + chunkX + ':' + chunkZ)
     const worldX = chunkX * 16 + size / 2
     const worldZ = chunkZ * 16 + size / 2
@@ -227,17 +229,17 @@ function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, si
         const { bedrock, soil, soil2, surface, currentWaterline, biome } = levels[x][z]
         // Bedrock Layer
         for (let y = 0; y <= bedrock; y++) {
-          chunk.setBlockType(new Vec3(x, y, z), registry.blocksByName.bedrock.id)
+          setBlock(new Vec3(x, y, z), blocksByName.bedrock)
         }
         // Stone Layer
         for (let y = bedrock + 1; y <= soil2; y++) {
           // Ores
-          let block = registry.blocksByName.stone
-          if (y > 20 && placements(40) === 0) block = registry.blocksByName.coal_ore
-          else if (y > 20 && placements(50) === 0) block = registry.blocksByName.iron_ore
-          else if (y < 20 && placements(100) === 0) block = registry.blocksByName.redstone_ore
-          else if (y < 20 && placements(150) === 0) block = registry.blocksByName.diamond_ore
-          chunk.setBlockType(new Vec3(x, y, z), block.id)
+          let block = blocksByName.stone
+          if (y > 20 && placements(40) === 0) block = blocksByName.coal_ore
+          else if (y > 20 && placements(50) === 0) block = blocksByName.iron_ore
+          else if (y < 20 && placements(100) === 0) block = blocksByName.redstone_ore
+          else if (y < 20 && placements(150) === 0) block = blocksByName.diamond_ore
+          setBlock(new Vec3(x, y, z), block)
           if (theFlattening) chunk.setBlockStateId(new Vec3(x, y, z), block.defaultState)
         }
         // Soil Layer 2
@@ -246,17 +248,17 @@ function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, si
           switch (biome) {
             case 'river':
             case 'ocean':
-              chunk.setBlockType(vec, registry.blocksByName.dirt.id)
+              setBlock(vec, blocksByName.dirt)
               break
             case 'desert':
-              chunk.setBlockType(vec, registry.blocksByName.sandstone.id)
+              setBlock(vec, blocksByName.sandstone)
               break
             case 'mountains':
-              chunk.setBlockType(vec, registry.blocksByName.stone.id)
+              setBlock(vec, blocksByName.stone)
               break
             case 'forest':
             case 'plains':
-              chunk.setBlockType(vec, registry.blocksByName.dirt.id)
+              setBlock(vec, blocksByName.dirt)
               if (theFlattening) chunk.setBlockData(vec, 1)
               break
             default:
@@ -270,14 +272,14 @@ function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, si
             case 'river':
             case 'ocean':
             case 'desert':
-              chunk.setBlockType(vec, registry.blocksByName.sand.id)
+              setBlock(vec, blocksByName.sand)
               break
             case 'mountains':
-              chunk.setBlockType(vec, registry.blocksByName.stone.id)
+              setBlock(vec, blocksByName.stone)
               break
             case 'forest':
             case 'plains':
-              chunk.setBlockType(vec, registry.blocksByName.dirt.id)
+              setBlock(vec, blocksByName.dirt)
               if (theFlattening) chunk.setBlockData(vec, 1)
               break
             default:
@@ -289,14 +291,14 @@ function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, si
           case 'river':
           case 'ocean':
           case 'desert':
-            chunk.setBlockType(new Vec3(x, surface, z), registry.blocksByName.sand.id)
+            setBlock(new Vec3(x, surface, z), blocksByName.sand)
             break
           case 'mountains':
-            chunk.setBlockType(new Vec3(x, surface, z), registry.blocksByName.stone.id)
+            setBlock(new Vec3(x, surface, z), blocksByName.stone)
             break
           case 'forest':
           case 'plains':
-            chunk.setBlockType(new Vec3(x, surface, z), registry.blocksByName.grass_block?.id ?? registry.blocksByName.grass.id)
+            setBlock(new Vec3(x, surface, z), blocksByName.grass_block ?? blocksByName.grass)
             if (theFlattening) chunk.setBlockData(new Vec3(x, surface, z), 1)
             break
           default:
@@ -304,12 +306,11 @@ function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, si
         }
         // Water Layer
         for (let y = surface + 1; y <= currentWaterline; y++) {
-          chunk.setBlockType(new Vec3(x, y, z), registry.blocksByName.water.id)
+          setBlock(new Vec3(x, y, z), blocksByName.water)
         }
       }
     }
     // Decorations: grass, flowers, sugar cane, cactus, dead bushes, kelp, seagrass, tall seagrass, tall grass, double tall grass, etc...
-    // Disable seagrass and kelp for now
     for (let x = 0; x < 16; x++) {
       for (let z = 0; z < 16; z++) {
         const { surface, biome, currentWaterline } = levels[x][z]
@@ -317,59 +318,59 @@ function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, si
         const decorationVec = new Vec3(x, surface + 1, z)
         const waterDepth = Math.max(currentWaterline - surface, 0)
         if (['forest', 'plains'].includes(biome) && placements(30) === 0) { // Grass
-          const block = registry.blocksByName.short_grass ?? registry.blocksByName.tallgrass ?? registry.blocksByName.grass;
-          chunk.setBlockType(decorationVec, block.id)
+          const block = blocksByName.short_grass ?? blocksByName.tallgrass ?? blocksByName.grass;
+          setBlock(decorationVec, block)
           if (theFlattening) chunk.setBlockStateId(decorationVec, block.defaultState)
         } else if (['plains'].includes(biome) && placements(100) === 0) { // Flowers
-          const flower = registry.blocksByName[placements(2) === 0 ? 'dandelion' : 'poppy']
-          chunk.setBlockType(decorationVec, flower.id)
+          const flower = blocksByName[placements(2) === 0 ? 'dandelion' : 'poppy']
+          setBlock(decorationVec, flower)
         } else if (['desert'].includes(biome) && placements(100) === 0) { // Dead bushes
-          chunk.setBlockType(decorationVec, registry.blocksByName.dead_bush.id)
-        } else if ('seagrass' in registry.blocksByName && ['river', 'ocean'].includes(biome) && waterDepth >= 2 && placements(30) === 0) { // Seagrass
-          // chunk.setBlockType(decorationVec, registry.blocksByName.seagrass.id)
+          setBlock(decorationVec, blocksByName.dead_bush)
+        } else if ('seagrass' in blocksByName && ['river', 'ocean'].includes(biome) && waterDepth >= 2 && placements(30) === 0) { // Seagrass
+          // setBlock(decorationVec, blocksByName.seagrass)
           // if (theFlattening) chunk.setBlockData(decorationVec, 1)
-        } else if ('tall_grass' in registry.blocksByName && ['forest', 'plains'].includes(biome) && placements(120) === 0) { // Double tall grass
+        } else if ('tall_grass' in blocksByName && ['forest', 'plains'].includes(biome) && placements(120) === 0) { // Double tall grass
           const decorationVec2 = decorationVec.offset(0, 1, 0)
-          chunk.setBlockType(decorationVec, registry.blocksByName.tall_grass?.id)
-          chunk.setBlockType(decorationVec2, registry.blocksByName.tall_grass?.id)
+          setBlock(decorationVec, blocksByName.tall_grass)
+          setBlock(decorationVec2, blocksByName.tall_grass)
           if (theFlattening) {
             chunk.setBlockData(decorationVec, 1)
             chunk.setBlockData(decorationVec2, 0)
           }
-        } else if ('tall_seagrass' in registry.blocksByName && ['river', 'ocean'].includes(biome) && waterDepth >= 3 && placements(40) === 0) { // Double tall seagrass
+        } else if ('tall_seagrass' in blocksByName && ['river', 'ocean'].includes(biome) && waterDepth >= 3 && placements(40) === 0) { // Double tall seagrass
           // const decorationVec2 = decorationVec.offset(0, 1, 0)
-          // chunk.setBlockType(decorationVec, registry.blocksByName.tall_seagrass?.id)
-          // chunk.setBlockType(decorationVec2, registry.blocksByName.tall_seagrass?.id)
+          // setBlock(decorationVec, blocksByName.tall_seagrass)
+          // setBlock(decorationVec2, blocksByName.tall_seagrass)
           // if (theFlattening) {
           //   chunk.setBlockData(decorationVec, 1)
           //   chunk.setBlockData(decorationVec2, 0)
           // }
-        } else if (['river', 'ocean'].includes(biome) && !waterDepth && [[-1, 0, 0], [0, 0, -1], [0, 0, 1], [1, 0, 0]].some(offset => chunk.getBlockType(surfaceVec.offset(...offset)) === registry.blocksByName.water.id) && placements(75) === 0) { // Sugar cane
+        } else if (['river', 'ocean'].includes(biome) && !waterDepth && [[-1, 0, 0], [0, 0, -1], [0, 0, 1], [1, 0, 0]].some(offset => chunk.getBlockType(surfaceVec.offset(...offset)) === blocksByName.water.id) && placements(75) === 0) { // Sugar cane
           const height = placements(3) + 1
           for (let i = 0; i < height; i++) {
             const decorationVec2 = decorationVec.offset(0, i, 0)
-            chunk.setBlockType(decorationVec2, registry.blocksByName.reeds?.id ?? registry.blocksByName.sugar_cane.id)
+            setBlock(decorationVec2, blocksByName.reeds ?? blocksByName.sugar_cane)
           }
-        } else if (['desert'].includes(biome) && !waterDepth && [[-1, 0, -1], [-1, 0, 0], [-1, 0, 1], [0, 0, -1], [0, 0, 1], [1, 0, -1], [1, 0, 0], [1, 0, 1]].every(offset => chunk.getBlockType(decorationVec.offset(...offset)) === registry.blocksByName.air.id) && placements(250) === 0) { // Cactus
+        } else if (['desert'].includes(biome) && !waterDepth && [[-1, 0, -1], [-1, 0, 0], [-1, 0, 1], [0, 0, -1], [0, 0, 1], [1, 0, -1], [1, 0, 0], [1, 0, 1]].every(offset => chunk.getBlockType(decorationVec.offset(...offset)) === blocksByName.air.id) && placements(250) === 0) { // Cactus
           const height = placements(3) + 1
           for (let i = 0; i < height; i++) {
             const decorationVec2 = decorationVec.offset(0, i, 0)
-            chunk.setBlockType(decorationVec2, registry.blocksByName.cactus.id)
+            setBlock(decorationVec2, blocksByName.cactus)
             if (theFlattening) chunk.setBlockData(decorationVec2, i === height - 1 ? 1 : 0)
           }
-        } else if ('kelp' in registry.blocksByName && ['ocean'].includes(biome) && waterDepth >= 3 && placements(40) === 0) { // Kelp
+        } else if ('kelp' in blocksByName && ['ocean'].includes(biome) && waterDepth >= 3 && placements(40) === 0) { // Kelp
           // const height = placements(waterDepth - 3) + 2
           // for (let i = 0; i < height - 1; i++) {
           //   const decorationVec2 = decorationVec.offset(0, i, 0)
-          //   chunk.setBlockType(decorationVec2, registry.blocksByName.kelp_plant.id)
+          //   setBlock(decorationVec2, blocksByName.kelp_plant)
           // }
           // const decorationVec2 = decorationVec.offset(0, height - 1, 0)
-          // chunk.setBlockType(decorationVec2, registry.blocksByName.kelp.id)
+          // setBlock(decorationVec2, blocksByName.kelp)
         } else if ((biome === 'plains' && placements(3000) === 0) || (biome === 'forest' && placements(200) === 0)) { // Trees
           const height = placements(4) + 4
           for (let i = 0; i < height; i++) {
             const decorationVec2 = decorationVec.offset(0, i, 0)
-            chunk.setBlockType(decorationVec2, registry.blocksByName.oak_log.id)
+            setBlock(decorationVec2, blocksByName.oak_log)
             if (theFlattening) chunk.setBlockData(decorationVec2, 1)
           }
           const topOfTree = decorationVec.offset(0, height, 0)
@@ -389,7 +390,7 @@ function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, si
             [-1, -1, -1]
           ]
           for (const [offsetX, offsetY, offsetZ] of offsets) {
-            chunk.setBlockType(topOfTree.offset(offsetX, offsetY, offsetZ), registry.blocksByName.oak_leaves.id)
+            setBlock(topOfTree.offset(offsetX, offsetY, offsetZ), blocksByName.oak_leaves)
             if (theFlattening) {
               chunk.setBlockData(topOfTree.offset(offsetX, offsetY, offsetZ), 0)
             }
@@ -398,7 +399,7 @@ function generation ({ version, seed, worldHeight = 80, minY, waterline = 32, si
             for (let dx = -2; dx <= 2; dx++) {
               for (let dz = -2; dz <= 2; dz++) {
                 if (dx === 0 && dz === 0) continue
-                chunk.setBlockType(decorationVec.offset(dx, i, dz), registry.blocksByName.oak_leaves.id)
+                setBlock(decorationVec.offset(dx, i, dz), blocksByName.oak_leaves)
                 if (theFlattening) {
                   chunk.setBlockData(decorationVec.offset(dx, i, dz), 0)
                 }
